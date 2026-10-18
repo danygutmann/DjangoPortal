@@ -9,3 +9,6 @@ venv/
 htmlcov/
 staticfiles/
 backups/
+/tls/*.crt
+/tls/*.key
+/tls-ca/*.crt

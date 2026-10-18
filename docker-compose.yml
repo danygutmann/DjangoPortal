@@ -3,20 +3,34 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py sync_modules &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py migrate --noinput
+        python manage.py sync_modules
+        if [ "$$BACKEND_TLS_ENABLED" = "1" ]; then
+          exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 \
+            --certfile "$$BACKEND_TLS_CERT_FILE" --keyfile "$$BACKEND_TLS_KEY_FILE"
+        fi
+        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
     env_file: .env
     environment:
       DB_HOST: mariadb
+      BACKEND_TLS_ENABLED: ${BACKEND_TLS_ENABLED:-0}
+      BACKEND_TLS_CERT_FILE: ${BACKEND_TLS_CERT_FILE:-/run/tls/server.crt}
+      BACKEND_TLS_KEY_FILE: ${BACKEND_TLS_KEY_FILE:-/run/tls/server.key}
+      SSL_CERT_FILE: ${BACKEND_TLS_CA_FILE:-/run/tls-ca/ca.crt}
+    volumes:
+      - ./tls:/run/tls:ro
+      - ./tls-ca:/run/tls-ca:ro
     depends_on:
       mariadb:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/').read()"]
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request; scheme='https' if os.getenv('BACKEND_TLS_ENABLED') == '1' else 'http'; urllib.request.urlopen(scheme + '://backend:8000/health/').read()\""]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -30,7 +44,10 @@ services:
     command: python frontend/main.py
     env_file: .env
     environment:
-      BACKEND_URL: http://backend:8000
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      SSL_CERT_FILE: ${BACKEND_TLS_CA_FILE:-/run/tls-ca/ca.crt}
+    volumes:
+      - ./tls-ca:/run/tls-ca:ro
     depends_on:
       backend:
         condition: service_healthy

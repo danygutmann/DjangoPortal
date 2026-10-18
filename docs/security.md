@@ -19,11 +19,13 @@
 
 ## Production hardening required
 
-The Compose example is a development-oriented deployment baseline, not a
-complete hardened perimeter. Put it behind TLS, do not expose the Django port
-or phpMyAdmin publicly, restrict admin access, set secure cookie and proxy
-settings (`DJANGO_SECURE_COOKIES=1`) for the actual topology, rotate secrets with a planned process, and
-monitor backup success. API tokens are bearer credentials: protect frontend
-traffic with TLS and treat the NiceGUI storage secret as sensitive. OIDC,
+The Compose example defaults to HTTP for local development and is not a
+complete hardened perimeter. Enable `BACKEND_TLS_ENABLED` with a trusted
+service certificate for frontend-to-backend traffic. Put browser-facing traffic
+behind TLS, do not expose the Django port or phpMyAdmin publicly, restrict admin
+access, set secure cookie and proxy settings (`DJANGO_SECURE_COOKIES=1`) for
+the actual topology, rotate secrets with a planned process, and monitor backup
+success. API tokens are bearer credentials: protect frontend traffic with TLS
+and treat the NiceGUI storage secret as sensitive. OIDC,
 external rate limiting, audit retention policies, and a production reverse
 proxy are not implemented.

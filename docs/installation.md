@@ -32,3 +32,7 @@ restrict API/admin ingress, set `DJANGO_ALLOWED_HOSTS` and
 `DJANGO_CSRF_TRUSTED_ORIGINS`, and set `DJANGO_SECURE_COOKIES=1` before
 production. The port mappings bind to host loopback by default so a host proxy
 can reach them without exposing plain HTTP ports on every interface.
+
+For trusted frontend-to-backend traffic, configure the internal backend TLS
+certificate and CA as described in `configuration.md`, then set
+`BACKEND_TLS_ENABLED=1` and `BACKEND_URL=https://backend:8000`.
