@@ -1,9 +1,15 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-development-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "0").lower() in {"1", "true", "yes"}
+if not DEBUG and (
+    SECRET_KEY == "unsafe-development-key" or SECRET_KEY.startswith("replace-") or len(SECRET_KEY) < 50
+):
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY to a unique secret of at least 50 characters.")
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
 
@@ -74,6 +80,9 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_COOKIES = os.environ.get("DJANGO_SECURE_COOKIES", "1" if not DEBUG else "0").lower() in {"1", "true", "yes"}
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["core.authentication.APISessionAuthentication"],

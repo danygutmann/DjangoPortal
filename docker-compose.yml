@@ -14,7 +14,7 @@ services:
       mariadb:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/').read()"]
       interval: 30s
@@ -35,7 +35,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()"]
       interval: 30s
@@ -63,7 +63,7 @@ services:
 
   backup:
     image: mariadb:11.4
-    entrypoint: ["/bin/sh", "/backup/backup.sh"]
+    entrypoint: ["/bin/bash", "/backup/backup.sh"]
     env_file: .env
     environment:
       DB_HOST: mariadb

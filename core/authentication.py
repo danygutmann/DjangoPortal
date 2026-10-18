@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core import signing
 from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
@@ -23,7 +24,7 @@ class APISessionAuthentication(BaseAuthentication):
         try:
             payload = signing.loads(parts[1].decode("ascii"), salt=TOKEN_SALT, max_age=settings.API_SESSION_MAX_AGE)
             session = APISession.objects.select_related("user").get(pk=payload["session"])
-        except (UnicodeDecodeError, signing.BadSignature, KeyError, APISession.DoesNotExist, ValueError):
+        except (UnicodeDecodeError, signing.BadSignature, KeyError, APISession.DoesNotExist, ValueError, ValidationError):
             raise AuthenticationFailed("Invalid or expired API session.")
         if not session.active:
             raise AuthenticationFailed("API session is no longer active.")

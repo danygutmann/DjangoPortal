@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from rest_framework.permissions import AllowAny
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.api import AuthViewSet, ModuleViewSet, PermissionView
@@ -17,6 +18,6 @@ urlpatterns = [
     path("health/", health, name="health"),
     path("api/v1/", include(router.urls)),
     path("api/v1/me/permissions/", PermissionView.as_view(), name="my-permissions"),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="api-docs"),
+    path("api/schema/", SpectacularAPIView.as_view(permission_classes=[AllowAny]), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[AllowAny]), name="api-docs"),
 ]

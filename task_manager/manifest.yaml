@@ -1,0 +1,14 @@
+id: task_manager
+name: Task manager
+version: "1.0.0"
+default_enabled: true
+pages:
+  - path: /tasks
+    name: Tasks
+navigation:
+  - label: Tasks
+    path: /tasks
+permissions:
+  - task_manager.access_task_manager
+  - task_manager.view_task
+admin_permission: task_manager.administer_task_manager
