@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -euo pipefail
 umask 077
 
 mkdir -p /backups
@@ -10,10 +10,12 @@ weekly_retention="${BACKUP_RETENTION_WEEKLY:-8}"
 while true; do
     stamp="$(date -u +%Y%m%d_%H%M%S)"
     target="/backups/djangoportal_${stamp}.sql.gz"
-    if mariadb-dump --host="$DB_HOST" --user="$DB_USER" --single-transaction --routines --triggers "$DB_NAME" | gzip -9 > "$target"; then
+    temporary="${target}.tmp"
+    if mariadb-dump --skip-ssl --host="$DB_HOST" --user="$DB_USER" --single-transaction --routines --triggers "$DB_NAME" | gzip -9 > "$temporary"; then
+        mv "$temporary" "$target"
         echo "Created backup $target"
     else
-        rm -f "$target"
+        rm -f "$temporary"
         echo "Backup failed at $stamp" >&2
     fi
 

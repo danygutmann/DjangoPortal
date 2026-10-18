@@ -16,7 +16,7 @@ the target database with a trusted MariaDB client:
 docker compose stop backend frontend
 docker compose cp backup:/backups/djangoportal_YYYYMMDD_HHMMSS.sql.gz /tmp/portal.sql.gz
 gzip -dc /tmp/portal.sql.gz | docker compose exec -T mariadb sh -c \
-  'export MARIADB_PWD="$MARIADB_PASSWORD"; exec mariadb --user="$MARIADB_USER" "$MARIADB_DATABASE"'
+  'export MYSQL_PWD="$MARIADB_PASSWORD"; exec mariadb --skip-ssl --user="$MARIADB_USER" "$MARIADB_DATABASE"'
 docker compose up -d backend frontend
 ```
 

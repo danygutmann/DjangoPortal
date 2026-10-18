@@ -76,6 +76,13 @@ class TaskAPITests(APITestCase):
         })
         self.assertEqual(response.status_code, 403)
 
+    def test_module_administrator_can_manage_tasks_without_individual_grants(self):
+        self.user.user_permissions.clear()
+        self.grant(self.user, "administer_task_manager")
+        response = self.client.post("/api/v1/tasks/", {"title": "Admin task"})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.client.get("/api/v1/tasks/").status_code, 200)
+
     def test_search_filters_and_invalid_dates(self):
         Task.objects.create(title="Release plan", status="open", created_by=self.user)
         Task.objects.create(title="Other", status="done", created_by=self.user)
