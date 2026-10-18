@@ -1,0 +1,110 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py migrate --noinput
+        python manage.py sync_modules
+        if [ "$$BACKEND_TLS_ENABLED" = "1" ]; then
+          exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 \
+            --certfile "$$BACKEND_TLS_CERT_FILE" --keyfile "$$BACKEND_TLS_KEY_FILE"
+        fi
+        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    env_file: .env
+    environment:
+      DB_HOST: mariadb
+      BACKEND_TLS_ENABLED: ${BACKEND_TLS_ENABLED:-0}
+      BACKEND_TLS_CERT_FILE: ${BACKEND_TLS_CERT_FILE:-/run/tls/server.crt}
+      BACKEND_TLS_KEY_FILE: ${BACKEND_TLS_KEY_FILE:-/run/tls/server.key}
+      SSL_CERT_FILE: ${BACKEND_TLS_CA_FILE:-/run/tls-ca/ca.crt}
+    volumes:
+      - ./tls:/run/tls:ro
+      - ./tls-ca:/run/tls-ca:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request; scheme='https' if os.getenv('BACKEND_TLS_ENABLED') == '1' else 'http'; urllib.request.urlopen(scheme + '://backend:8000/health/').read()\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python frontend/main.py
+    env_file: .env
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      SSL_CERT_FILE: ${BACKEND_TLS_CA_FILE:-/run/tls-ca/ca.crt}
+    volumes:
+      - ./tls-ca:/run/tls-ca:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:?Set DB_NAME in .env}
+      MARIADB_USER: ${DB_USER:?Set DB_USER in .env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  backup:
+    image: mariadb:11.4
+    entrypoint: ["/bin/bash", "/backup/backup.sh"]
+    env_file: .env
+    environment:
+      DB_HOST: mariadb
+      MYSQL_PWD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - ./ops/backup.sh:/backup/backup.sh:ro
+      - backup_data:/backups
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:5.2-apache
+    profiles: ["tools"]
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:
+  backup_data:
